@@ -72,6 +72,8 @@ node_templates:
           domain_name: { get_input: domain_name }
         source:
           location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/main.zip
+          username: { get_secret: github_username }
+          password: { get_secret: github_password }
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
