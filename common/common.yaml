@@ -1,0 +1,77 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.1.2/types.yaml
+  - plugin:cloudify-terraform-plugin?version= >=0.15.0
+
+inputs:
+  aws_region:
+    type: string
+    description: AWS region to launch servers
+    required: true
+    default: eu-central-1
+
+  availability_zones:
+    type: list
+    description: AWS ELB availability zones
+    required: true
+    default: [ eu-central-1a, eu-central-1b ]
+
+  elb_name:
+    type: string
+    description: Name of the Elastic Load Balancer to be created.
+    required: true
+    default: CloudifyELB
+
+  db_name:
+    type: string
+    description: Name of the database to be created. Must begin with a letter and contain only alphanumeric characters.
+    required: true
+    default: CloudifyDB
+    constraints:
+      - pattern: "^[a-zA-Z][a-zA-Z0-9]+$"
+
+  db_username:
+    type: string
+    description: Name of the database user
+    required: true
+    default: cloudify
+
+  db_password:
+    type: string
+    description: Password of the database user
+    required: true
+    default: C!0ud1FY
+
+  domain_name:
+    type: string
+    description: Domain for AWS Route53
+    required: true
+    default: example-app.cloudify.com
+
+node_templates:
+  terraform:
+    type: cloudify.nodes.terraform
+    properties:
+      resource_config:
+        installation_source: https://releases.hashicorp.com/terraform/0.14.3/terraform_0.14.3_linux_amd64.zip
+
+  terraform_module:
+    type: cloudify.nodes.terraform.Module
+    properties:
+      resource_config:
+        variables:
+          aws_region: { get_input: aws_region }
+          access_key: { get_secret: aws_access_key }
+          secret_key: { get_secret: aws_secret_key }
+          availability_zones: { get_input: availability_zones }
+          elb_name: { get_input: elb_name }
+          db_name: { get_input: db_name }
+          db_username: { get_input: db_username }
+          db_password: { get_input: db_password }
+          domain_name: { get_input: domain_name }
+        source:
+          location: https://github.com/jakubcierlik/citi-poc-terraform/archive/refs/heads/main.zip
+    relationships:
+      - target: terraform
+        type: cloudify.terraform.relationships.run_on_host

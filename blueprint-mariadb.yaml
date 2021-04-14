@@ -1,0 +1,323 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - plugin:cloudify-ansible-plugin
+  - plugin:cloudify-utilities-plugin
+  - plugin:cloudify-aws-plugin
+  - common/common.yaml
+
+inputs:
+  instance_type:
+    description: >
+      The AWS instance_type.
+    default: 't2.micro'
+
+dsl_definitions:
+
+  client_config: &client_config
+    aws_access_key_id: { get_secret: aws_access_key }
+    aws_secret_access_key: { get_secret: aws_secret_key }
+    region_name: { get_input: aws_region }
+
+node_templates:
+
+  cluster_member_aggregator:
+    type: cloudify.nodes.Root
+
+  mariadb:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure:
+          implementation: ansible.cloudify_ansible.tasks.run
+          inputs:
+            site_yaml_path: mariadb/galera.yml
+            sources: { get_attribute: [ SELF, sources ] }
+            options_config:
+              tags: setup
+        start:
+          implementation: ansible.cloudify_ansible.tasks.run
+          inputs:
+            site_yaml_path: mariadb/galera.yml
+            sources: { get_attribute: [ SELF, sources ] }
+            options_config:
+              skip_tags: setup
+            run_data:
+              new_database_name: { get_input: db_name }
+              new_database_user: { get_input: db_username }
+              new_database_password: { get_input: db_password }
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: host
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            preconfigure:
+              implementation: ansible.cloudify_ansible.tasks.ansible_requires_host
+              inputs:
+                group_name: galera_cluster
+                host_config:
+                  ansible_host: { get_attribute: [ host, ip ] }
+                  ansible_user: { get_property: [ host, agent_config, user ] }
+                  ansible_ssh_private_key_file: { get_property: [ host, agent_config, key ] }
+                  ansible_become: true
+                  ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+      - type: cloudify.relationships.depends_on
+        target: cluster_member_aggregator
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            establish:
+              implementation: scripts/establish.py
+              executor: central_deployment_agent
+
+  galera_cluter_configuration:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure:
+          implementation: ansible.cloudify_ansible.tasks.run
+          inputs:
+            site_yaml_path: mariadb/galera_bootstrap.yml
+            sources: { get_attribute: [ mariadb, sources ] }
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: mariadb
+
+  cloud_init:
+    type: cloudify.nodes.CloudInit.CloudConfig
+    properties:
+      resource_config:
+        users:
+          - name: ec2-user
+            primary-group: wheel
+            shell: /bin/bash
+            sudo:
+              - 'ALL=(ALL) NOPASSWD:ALL'
+            ssh-authorized-keys:
+              - { get_attribute: [agent_key, public_key_export] }
+          - name: prometheus-node-exporter
+            sudo:
+              - 'ALL=(ALL) NOPASSWD:ALL'
+            groups: wheel
+            homedir: /home/prometheus-node-exporter
+        write_files:
+          - path: /etc/systemd/system/node_exporter.service
+            owner: prometheus-node-exporter:wheel
+            permissions: '0777'
+            content: |
+              [Unit]
+              Description=Node Exporter
+
+              [Service]
+              User=prometheus
+              ExecStart=/home/prometheus-node-exporter/Prometheus/node_exporter/node_exporter
+
+              [Install]
+              WantedBy=default.target
+        runcmd:
+          - cd /home/prometheus-node-exporter/ && curl -LO "https://github.com/prometheus/node_exporter/releases/download/0.11.0/node_exporter-0.11.0.linux-amd64.tar.gz"
+          - mkdir -p /home/prometheus-node-exporter/Prometheus/node_exporter
+          - cd /home/prometheus-node-exporter/Prometheus/node_exporter
+          - tar -xvzf /home/prometheus-node-exporter/node_exporter-0.11.0.linux-amd64.tar.gz
+          - systemctl daemon-reload
+          - systemctl enable node_exporter.service
+          - systemctl start node_exporter.service
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: agent_key
+
+  agent_key:
+    type: cloudify.keys.nodes.RSAKey
+    properties:
+      resource_config:
+        key_name: cfy_key
+        openssh_format: true
+      use_secret_store: true
+      use_secrets_if_exist: true
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: keys.cloudify_ssh_key.operations.create
+          inputs:
+            store_private_key_material: true
+
+  host:
+    type: cloudify.nodes.aws.ec2.Instances
+    properties:
+      client_config: *client_config
+      agent_config:
+        install_method: none
+        user: ec2-user
+        key: { get_attribute: [agent_key, private_key] }
+      resource_config:
+        MaxCount: 1
+        MinCount: 1
+        ImageId: { get_attribute: [ centos_core_ami, aws_resource_id ] }
+        InstanceType: { get_input: instance_type }
+        kwargs:
+          BlockDeviceMappings:
+          - DeviceName: '/dev/sda1'
+            Ebs:
+              DeleteOnTermination: True
+          Placement:
+            # TODO: from input?
+            AvailabilityZone: eu-central-1a
+          UserData: { get_attribute: [ cloud_init, cloud_config ] }
+      use_public_ip: true
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: nic
+      # - type: cloudify.relationships.depends_on
+      #   target: ip
+      - type: cloudify.relationships.depends_on
+        target: centos_core_ami
+      - type: cloudify.relationships.depends_on
+        target: cloud_init
+
+  # ip:
+  #   type: cloudify.nodes.aws.ec2.ElasticIP
+  #   properties:
+  #     client_config: *client_config
+  #   relationships:
+  #     - type: cloudify.relationships.depends_on
+  #       target: nic
+
+  nic:
+    type: cloudify.nodes.aws.ec2.Interface
+    properties:
+      client_config: *client_config
+      resource_config:
+        kwargs:
+          SubnetId: { get_attribute: [ subnet, aws_resource_id] }
+          Groups:
+            - { get_attribute: [ security_group, aws_resource_id ] }
+          AvailabilityZone: eu-central-1a
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: subnet
+      - type: cloudify.relationships.depends_on
+        target: security_group
+      - type: cloudify.relationships.depends_on
+        target: security_group_rules
+
+  security_group_rules:
+    type: cloudify.nodes.aws.ec2.SecurityGroupRuleIngress
+    properties:
+      client_config: *client_config
+      resource_config:
+        IpPermissions:
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 3306
+            ToPort: 3306
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 4444
+            ToPort: 4444
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 4567
+            ToPort: 4568
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
+          - IpProtocol: tcp
+            FromPort: 9100
+            ToPort: 9100
+            IpRanges:
+              - CidrIp: 0.0.0.0/0
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: security_group
+
+  security_group:
+    type: cloudify.nodes.aws.ec2.SecurityGroup
+    properties:
+      client_config: *client_config
+      resource_config:
+        Description: Security group for MariaDB host VM
+        GroupName: cloudify-security-group
+        VpcId: { get_attribute: [ vpc, aws_resource_id] }
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: vpc
+
+  subnet:
+    type: cloudify.nodes.aws.ec2.Subnet
+    properties:
+      client_config: *client_config
+      use_external_resource: true
+      resource_id: { get_attribute: [ terraform_module, resources, main_subnet, instances, 0, attributes, id ] }
+      resource_config:
+        CidrBlock: 'N/A'
+        AvailabilityZone: 'N/A'
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: terraform_module
+
+  vpc:
+    type: cloudify.nodes.aws.ec2.Vpc
+    properties:
+      client_config: *client_config
+      use_external_resource: true
+      resource_id: { get_attribute: [ terraform_module, resources, main_vpc, instances, 0, attributes, id ]  }
+      resource_config:
+        CidrBlock: 'N/A'
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: terraform_module
+
+  centos_core_ami:
+    type: cloudify.nodes.aws.ec2.Image
+    properties:
+      client_config: *client_config
+      resource_config:
+        kwargs:
+          Filters:
+          - Name: owner-id
+            Values:
+            - "057448758665"
+          - Name: name
+            Values:
+            - "CentOS 7.7.1908 x86_64 with cloud-init (HVM)"
+
+groups:
+
+  scalable_compute:
+    members:
+      - host
+      - nic
+      # - ip
+
+  scalable_cluster:
+    members:
+      - scalable_compute
+      - mariadb
+
+policies:
+
+  scalable_compute_policy:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 1
+    targets: [scalable_compute]
+
+  scalable_cluster_policy:
+    type: cloudify.policies.scaling
+    properties:
+      default_instances: 1
+    targets: [scalable_cluster]
+
+capabilities:
+
+  endpoints:
+    value: { get_attribute: [ cluster_member_aggregator, cluster_members ] }

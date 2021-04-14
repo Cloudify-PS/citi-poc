@@ -1,0 +1,25 @@
+---
+- name: Ensure MariaDB is running
+  service:
+    name: mariadb
+    state: started
+
+- name: Add Galera SST user
+  mysql_user:
+    name: "{{ galera_sst_user }}"
+    host: "localhost"
+    password: "{{ galera_sst_pass }}"
+    priv: "*.*:RELOAD,LOCK TABLES,REPLICATION CLIENT"
+
+- name: Create a new database
+  mysql_db:
+    name: "{{ new_database_name }}"
+    state: present
+
+- name: Create new database user.
+  mysql_user:
+    name: "{{ new_database_user }}"
+    host: '%'
+    password: "{{ new_database_password }}"
+    priv: 'drupal.*:ALL,GRANT'
+    state: present
