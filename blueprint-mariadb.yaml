@@ -147,7 +147,7 @@ node_templates:
       agent_config:
         install_method: none
         user: ec2-user
-        key: { get_attribute: [agent_key, private_key] }
+        key: { get_attribute: [agent_key, private_key_export] }
       resource_config:
         MaxCount: 1
         MinCount: 1
@@ -166,20 +166,20 @@ node_templates:
     relationships:
       - type: cloudify.relationships.depends_on
         target: nic
-      # - type: cloudify.relationships.depends_on
-      #   target: ip
+      - type: cloudify.relationships.depends_on
+        target: ip
       - type: cloudify.relationships.depends_on
         target: centos_core_ami
       - type: cloudify.relationships.depends_on
         target: cloud_init
 
-  # ip:
-  #   type: cloudify.nodes.aws.ec2.ElasticIP
-  #   properties:
-  #     client_config: *client_config
-  #   relationships:
-  #     - type: cloudify.relationships.depends_on
-  #       target: nic
+  ip:
+    type: cloudify.nodes.aws.ec2.ElasticIP
+    properties:
+      client_config: *client_config
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: nic
 
   nic:
     type: cloudify.nodes.aws.ec2.Interface
@@ -190,7 +190,6 @@ node_templates:
           SubnetId: { get_attribute: [ subnet, aws_resource_id] }
           Groups:
             - { get_attribute: [ security_group, aws_resource_id ] }
-          AvailabilityZone: eu-central-1a
     relationships:
       - type: cloudify.relationships.depends_on
         target: subnet
@@ -276,6 +275,40 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: terraform_module
 
+  internet_gateway:
+    type: cloudify.nodes.aws.ec2.InternetGateway
+    properties:
+      client_config: *client_config
+    relationships:
+      - type: cloudify.relationships.connected_to
+        target: vpc
+
+  route_public_subnet_internet_gateway:
+    type: cloudify.nodes.aws.ec2.Route
+    properties:
+      resource_config:
+        kwargs:
+          DestinationCidrBlock: '0.0.0.0/0'
+      client_config: *client_config
+    relationships:
+    - type: cloudify.relationships.contained_in
+      target: routetable
+    - type: cloudify.relationships.connected_to
+      target: internet_gateway
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        stop: {}
+
+  routetable:
+    type: cloudify.nodes.aws.ec2.RouteTable
+    properties:
+      client_config: *client_config
+    relationships:
+    - type: cloudify.relationships.contained_in
+      target: vpc
+    - type: cloudify.relationships.connected_to
+      target: subnet
+
   centos_core_ami:
     type: cloudify.nodes.aws.ec2.Image
     properties:
@@ -296,7 +329,7 @@ groups:
     members:
       - host
       - nic
-      # - ip
+      - ip
 
   scalable_cluster:
     members:
