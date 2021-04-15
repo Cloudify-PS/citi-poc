@@ -8,20 +8,20 @@ inputs:
 
   database_user:
     type: string
-    default: drupal
+    default: cloudify
 
   database_password:
     type: string
-    default: 'U2FsdGVkX19VxMEA6AdZt5fccsn/JsFU4eGpttt13JI='
+    default: C!0ud1FY
 
   database_name:
     type: string
-    default: drupal
+    default: CloudifyDB
 
   load_balancer_deployment:
     type: string
     description: The deployment ID of the DB LB APP lb deployment. Usually either 'lb', 'public-cloud-lb', or 'private-cloud-lb'.
-    default: lb
+    default: rds
 
   current_suffix_index:
     type: string
@@ -179,10 +179,10 @@ node_templates:
 
 outputs:
   app_login:
-    value:
-      concat:
-      - 'http://'
-      # - { get_capability: [ { get_input: kubernetes_deployment }, node-endpoint ] }
-      - { get_secret: openshift_master_endpoint }
-      - ':'
-      - { get_attribute: [ service, node_port ] }
+    value: { get_attribute: [ service, resources/service.yaml#0, status, load_balancer, ingress, 0, hostname ] }
+      # concat:
+      # - 'http://'
+      # # - { get_capability: [ { get_input: kubernetes_deployment }, node-endpoint ] }
+      # - { get_secret: openshift_master_endpoint }
+      # - ':'
+      # - { get_attribute: [ service, node_port ] }

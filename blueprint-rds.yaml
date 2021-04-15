@@ -77,3 +77,10 @@ node_templates:
     relationships:
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
+
+capabilities:
+
+  endpoint:
+    description: DB endpoint
+    value: { get_attribute: [terraform_module, resources, main_db_rds, instances, 0, attributes, address] }
+
