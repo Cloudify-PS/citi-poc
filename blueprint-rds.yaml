@@ -49,6 +49,12 @@ inputs:
     required: true
     default: example-app.cloudify.com
 
+  openshift_vpc_id:
+    type: string
+    description: ID of Openshift cluster VPC
+    required: true
+    default: vpc-01f23fec9019e8f4c
+
 node_templates:
   terraform:
     type: cloudify.nodes.terraform
@@ -70,8 +76,9 @@ node_templates:
           db_username: { get_input: db_username }
           db_password: { get_input: db_password }
           domain_name: { get_input: domain_name }
+          openshift_vpc_id: { get_input: openshift_vpc_id }
         source:
-          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/main.zip
+          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds.zip
           username: { get_secret: github_username }
           password: { get_secret: github_password }
     relationships:
