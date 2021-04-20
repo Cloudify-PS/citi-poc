@@ -12,13 +12,6 @@ inputs:
     description: The index of the deployment from a components composition
     default: '0'
 
-  openshift_namespace:
-    type: string
-    constraints:
-      - valid_values:
-        - prod
-        - cob
-
 node_types:
 
   cloudify.kubernetes.resources.PersistentVolumeClaim:
@@ -50,7 +43,7 @@ node_templates:
         resource_path: resources/pv.yaml
         template_variables:
           NAME: { concat: [  'wp-pv-',  { get_input: current_suffix_index } ] }
-          NAMESPACE: { get_input: openshift_namespace }
+          NAMESPACE: { get_secret: openshift_namespace }
           PATH:  { concat: [  '/tmp/data/wp-pv-',  { get_input: current_suffix_index } ] }
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
@@ -64,7 +57,7 @@ node_templates:
         kind: PersistentVolumeClaim
         metadata:
           name: { concat: [  'wp-pv-claim-', { get_input: current_suffix_index } ] }
-          namespace: { get_input: openshift_namespace }
+          namespace: { get_secret: openshift_namespace }
           labels:
             app:  { concat: [  'wordpress-',  { get_input: current_suffix_index } ] }
         spec:
@@ -88,7 +81,7 @@ node_templates:
           NODE_PORT: { get_attribute: [ service, node_port ] }
           PORT: 80
           NAME: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
-          NAMESPACE: { get_input: openshift_namespace }
+          NAMESPACE: { get_secret: openshift_namespace }
     interfaces:
       cloudify.interfaces.lifecycle:
         precreate:
@@ -112,7 +105,7 @@ node_templates:
         kind: Deployment
         metadata:
           name: { concat:  [  'wordpress-', { get_input: current_suffix_index } ] }
-          namespace: { get_input: openshift_namespace }
+          namespace: { get_secret: openshift_namespace }
           labels:
             app: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
         spec:
@@ -169,6 +162,9 @@ node_templates:
     properties:
       configuration:
         api_options: { get_attribute: [RDS--openshift_cluster, api_config] }
+    relationships:
+      - target: RDS--openshift_cluster
+        type: cloudify.relationships.depends_on
 
 
 outputs:
