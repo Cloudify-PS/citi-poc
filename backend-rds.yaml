@@ -17,12 +17,6 @@ inputs:
     required: true
     default: [ eu-central-1a, eu-central-1b ]
 
-  elb_name:
-    type: string
-    description: Name of the Elastic Load Balancer to be created.
-    required: true
-    default: CloudifyELB
-
   db_name:
     type: string
     description: Name of the database to be created. Must begin with a letter and contain only alphanumeric characters.
@@ -42,12 +36,6 @@ inputs:
     description: Password of the database user
     required: true
     default: C!0ud1FY
-
-  domain_name:
-    type: string
-    description: Domain for AWS Route53
-    required: true
-    default: app.cloudifydemo.link
 
   openshift_cluster:
     type: string
@@ -86,18 +74,16 @@ node_templates:
           access_key: { get_secret: aws_access_key }
           secret_key: { get_secret: aws_secret_key }
           availability_zones: { get_input: availability_zones }
-          elb_name: { get_input: elb_name }
           db_name: { get_input: db_name }
           db_username: { get_input: db_username }
           db_password: { get_input: db_password }
-          domain_name: { get_input: domain_name }
           openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc] }
           openshift_route_tb_id: { get_attribute: [openshift_cluster, network_config, route_tb] }
           openshift_public_subnet_id: { get_attribute: [openshift_cluster, network_config, public_subnet] }
           openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
           openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
         source:
-          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds.zip
+          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds_dev.zip
           username: { get_secret: github_username }
           password: { get_secret: github_password }
     relationships:

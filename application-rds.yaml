@@ -3,7 +3,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
   - plugin:cloudify-kubernetes-plugin
-  - RDS--blueprint-rds.yaml
+  - RDS--backend-rds.yaml
 
 inputs:
 
@@ -165,8 +165,3 @@ node_templates:
     relationships:
       - target: RDS--openshift_cluster
         type: cloudify.relationships.depends_on
-
-
-outputs:
-  app_url:
-    value: { get_input: RDS--domain_name }
