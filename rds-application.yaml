@@ -90,14 +90,14 @@ node_templates:
           NAME: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
           NAMESPACE: { get_input: openshift_namespace }
     interfaces:
-         cloudify.interfaces.lifecycle:
-            precreate:
-              implementation: scripts/setPort.py
-              inputs:
-                EXTERNAL_NODE_PORT_BASE: 30080
-                INSTANCE_INDEX: { get_input: current_suffix_index }
-              executor: central_deployment_agent
-              max_retries: 0
+      cloudify.interfaces.lifecycle:
+        precreate:
+          implementation: scripts/setPort.py
+          inputs:
+            EXTERNAL_NODE_PORT_BASE: 30080
+            INSTANCE_INDEX: { get_input: current_suffix_index }
+          executor: central_deployment_agent
+          max_retries: 0
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
@@ -168,7 +168,7 @@ node_templates:
     type: cloudify.kubernetes.nodes.Master
     properties:
       configuration:
-        api_options: { get_input: [RDS--openshift_cluster, api_config] }
+        api_options: { get_attribute: [RDS--openshift_cluster, api_config] }
 
 
 outputs:
