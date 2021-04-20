@@ -97,7 +97,7 @@ node_templates:
           openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
           openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
         source:
-          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds_dev.zip
+          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds.zip
           username: { get_secret: github_username }
           password: { get_secret: github_password }
     relationships:
