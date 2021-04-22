@@ -3,25 +3,9 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
   - plugin:cloudify-kubernetes-plugin
+  - RDS--backend-rds.yaml
 
 inputs:
-
-  database_user:
-    type: string
-    default: cloudify
-
-  database_password:
-    type: string
-    default: C!0ud1FY
-
-  database_name:
-    type: string
-    default: CloudifyDB
-
-  load_balancer_deployment:
-    type: string
-    description: The deployment ID of the DB LB APP lb deployment. Usually either 'lb', 'public-cloud-lb', or 'private-cloud-lb'.
-    default: rds
 
   current_suffix_index:
     type: string
@@ -59,6 +43,7 @@ node_templates:
         resource_path: resources/pv.yaml
         template_variables:
           NAME: { concat: [  'wp-pv-',  { get_input: current_suffix_index } ] }
+          NAMESPACE: { get_secret: openshift_namespace }
           PATH:  { concat: [  '/tmp/data/wp-pv-',  { get_input: current_suffix_index } ] }
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
@@ -72,6 +57,7 @@ node_templates:
         kind: PersistentVolumeClaim
         metadata:
           name: { concat: [  'wp-pv-claim-', { get_input: current_suffix_index } ] }
+          namespace: { get_secret: openshift_namespace }
           labels:
             app:  { concat: [  'wordpress-',  { get_input: current_suffix_index } ] }
         spec:
@@ -95,15 +81,16 @@ node_templates:
           NODE_PORT: { get_attribute: [ service, node_port ] }
           PORT: 80
           NAME: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
+          NAMESPACE: { get_secret: openshift_namespace }
     interfaces:
-         cloudify.interfaces.lifecycle:
-            precreate:
-              implementation: scripts/setPort.py
-              inputs:
-                EXTERNAL_NODE_PORT_BASE: 30080
-                INSTANCE_INDEX: { get_input: current_suffix_index }
-              executor: central_deployment_agent
-              max_retries: 0
+      cloudify.interfaces.lifecycle:
+        precreate:
+          implementation: scripts/setPort.py
+          inputs:
+            EXTERNAL_NODE_PORT_BASE: 30080
+            INSTANCE_INDEX: { get_input: current_suffix_index }
+          executor: central_deployment_agent
+          max_retries: 0
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
@@ -118,6 +105,7 @@ node_templates:
         kind: Deployment
         metadata:
           name: { concat:  [  'wordpress-', { get_input: current_suffix_index } ] }
+          namespace: { get_secret: openshift_namespace }
           labels:
             app: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
         spec:
@@ -138,13 +126,14 @@ node_templates:
                 name: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
                 env:
                   - name: WORDPRESS_DB_HOST
-                    value: { get_capability: [ { get_input: load_balancer_deployment }, endpoint ] }
+                    # value: { get_capability: [ { get_input: load_balancer_deployment }, db_endpoint ] }
+                    value: { get_attribute: [RDS--terraform_module, resources, main_db_rds, instances, 0, attributes, address] }
                   - name: WORDPRESS_DB_USER
-                    value: { get_input: database_user }
+                    value: { get_input: RDS--db_username }
                   - name: WORDPRESS_DB_PASSWORD
-                    value: { get_input: database_password }
+                    value: { get_input: RDS--db_password }
                   - name: WORDPRESS_DB_NAME
-                    value: { get_input: database_name }
+                    value: { get_input: RDS--db_name }
                   - name: WORDPRESS_TABLE_PREFIX
                     value: cfy
                 ports:
@@ -161,6 +150,8 @@ node_templates:
         # propagation_policy: 'Foreground'   
         # namespace: 'default'
     relationships:
+      - type: cloudify.relationships.depends_on
+        target: RDS--terraform_module
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
       - type: cloudify.relationships.depends_on
@@ -170,19 +161,7 @@ node_templates:
     type: cloudify.kubernetes.nodes.Master
     properties:
       configuration:
-        api_options:
-          host: { get_secret: openshift_master_endpoint }
-          api_key: { get_secret: openshift_secret_token }
-          debug: false
-          verify_ssl: false
-
-
-outputs:
-  app_login:
-    value: { get_attribute: [ service, resources/service.yaml#0, status, load_balancer, ingress, 0, hostname ] }
-      # concat:
-      # - 'http://'
-      # # - { get_capability: [ { get_input: kubernetes_deployment }, node-endpoint ] }
-      # - { get_secret: openshift_master_endpoint }
-      # - ':'
-      # - { get_attribute: [ service, node_port ] }
+        api_options: { get_attribute: [RDS--openshift_cluster, api_config] }
+    relationships:
+      - target: RDS--openshift_cluster
+        type: cloudify.relationships.depends_on

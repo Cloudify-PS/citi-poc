@@ -17,12 +17,6 @@ inputs:
     required: true
     default: [ eu-central-1a, eu-central-1b ]
 
-  elb_name:
-    type: string
-    description: Name of the Elastic Load Balancer to be created.
-    required: true
-    default: CloudifyELB
-
   db_name:
     type: string
     description: Name of the database to be created. Must begin with a letter and contain only alphanumeric characters.
@@ -43,19 +37,28 @@ inputs:
     required: true
     default: C!0ud1FY
 
-  domain_name:
+  openshift_cluster:
     type: string
-    description: Domain for AWS Route53
+    description: Openshift networking config
     required: true
-    default: example-app.cloudify.com
+    constraints:
+      - valid_values:
+          - os-cb-cluster1
+          - os-cb-cluster2
 
-  openshift_vpc_id:
-    type: string
-    description: ID of Openshift cluster VPC
-    required: true
-    default: vpc-01f23fec9019e8f4c
 
 node_templates:
+
+  openshift_cluster:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/init.py
+          inputs:
+            cluster_name: { get_input: openshift_cluster }
+
   terraform:
     type: cloudify.nodes.terraform
     properties:
@@ -71,23 +74,30 @@ node_templates:
           access_key: { get_secret: aws_access_key }
           secret_key: { get_secret: aws_secret_key }
           availability_zones: { get_input: availability_zones }
-          elb_name: { get_input: elb_name }
           db_name: { get_input: db_name }
           db_username: { get_input: db_username }
           db_password: { get_input: db_password }
-          domain_name: { get_input: domain_name }
-          openshift_vpc_id: { get_input: openshift_vpc_id }
+          openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc] }
+          openshift_route_tb_id: { get_attribute: [openshift_cluster, network_config, route_tb] }
+          openshift_public_subnet_id: { get_attribute: [openshift_cluster, network_config, public_subnet] }
+          openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
+          openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
         source:
-          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds.zip
+          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds_dev.zip
           username: { get_secret: github_username }
           password: { get_secret: github_password }
     relationships:
+      - target: openshift_cluster
+        type: cloudify.relationships.depends_on
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
 
 capabilities:
 
-  endpoint:
-    description: DB endpoint
+  db_endpoint:
+    description: RDS endpoint
     value: { get_attribute: [terraform_module, resources, main_db_rds, instances, 0, attributes, address] }
 
+  lb_endpoint:
+    description: ELB endpoint
+    value: { get_attribute: [terraform_module, resources, main_lb, instances, 0, attributes, dns_name] }
