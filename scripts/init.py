@@ -46,7 +46,7 @@ if cluster_name == CLUSTER_A:
 elif cluster_name == CLUSTER_B:
     configuration[API] = {
         "host": "https://api.os-cb-cluster3.p3w0.p1.openshiftapps.com:6443",
-        "api_key": "sha256~i6QBaa4D8Mya1AxSzXPkPJ2X1Ay-l2FsZsjQCXSIjME",
+        "api_key": "sha256~0hJuu_U35_a6JkcRWJkRnzKZyN2KE-cRHUflSYFHVXg",
         "debug": False,
         "verify_ssl": False
     }

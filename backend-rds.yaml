@@ -46,6 +46,15 @@ inputs:
           - os-cb-cluster1
           - os-cb-cluster3
 
+  db_cidr:
+    type: dict
+    description: RDS DB networking CIDRs
+    required: true
+    default:
+      vpc: 10.1.0.0/16
+      main_subnet: 10.1.1.0/24
+      backup_subnet: 10.1.2.0/24
+
 
 node_templates:
 
@@ -83,6 +92,9 @@ node_templates:
           openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
           openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
           openshift_vpc_cidr: { get_attribute: [openshift_cluster, network_config, vpc, cidr] }
+          db_vpc_cidr: { get_input: [db_cidr, vpc] }
+          main_db_subnet_cidr: { get_input: [db_cidr, main_subnet] }
+          backup_db_subnet_cidr: { get_input: [db_cidr, backup_subnet] }
         source:
           location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds_dev.zip
           username: { get_secret: github_username }
