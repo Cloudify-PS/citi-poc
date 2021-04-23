@@ -44,7 +44,7 @@ inputs:
     constraints:
       - valid_values:
           - os-cb-cluster1
-          - os-cb-cluster2
+          - os-cb-cluster3
 
 
 node_templates:
@@ -77,11 +77,12 @@ node_templates:
           db_name: { get_input: db_name }
           db_username: { get_input: db_username }
           db_password: { get_input: db_password }
-          openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc] }
+          openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc, id] }
           openshift_route_tb_id: { get_attribute: [openshift_cluster, network_config, route_tb] }
           openshift_public_subnet_id: { get_attribute: [openshift_cluster, network_config, public_subnet] }
           openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
           openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
+          openshift_vpc_cidr: { get_attribute: [openshift_cluster, network_config, vpc, cidr] }
         source:
           location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds_dev.zip
           username: { get_secret: github_username }

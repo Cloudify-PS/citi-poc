@@ -1,5 +1,6 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
+
 imports:
   - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
   - CLUSTER_A--application-rds.yaml
@@ -16,40 +17,41 @@ inputs:
     type: string
     description: Domain for AWS Route53
     required: true
-    default: app.cloudifydemo.link
+    default: poc.cloudifydemo.link
 
 
-node_templates:
+# node_templates:
 
-  terraform_module:
-    type: cloudify.nodes.terraform.Module
-    properties:
-      resource_config:
-        variables:
-          aws_region: { get_input: CLUSTER_A--RDS--aws_region }
-          access_key: { get_secret: aws_access_key }
-          secret_key: { get_secret: aws_secret_key }
-          lb_name: { get_input: lb_name }
-          domain_name: { get_input: domain_name }
-          openshift1_vpc_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, vpc] }
-          openshift2_vpc_id: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, vpc] }
-          openshift_public_subnet_ids: 
-            - { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, public_subnet] }
-            - { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, public_subnet] }
-          openshift_security_group_ids: 
-            - { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, security_group] }
-            - { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, security_group] }
-        source:
-          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/lb.zip
-          username: { get_secret: github_username }
-          password: { get_secret: github_password }
-    relationships:
-      - target: CLUSTER_A--RDS--openshift_cluster
-        type: cloudify.relationships.depends_on
-      - target: CLUSTER_B--RDS--openshift_cluster
-        type: cloudify.relationships.depends_on
-      - target: CLUSTER_A--RDS--terraform
-        type: cloudify.terraform.relationships.run_on_host
+#   terraform_module:
+#     type: cloudify.nodes.terraform.Module
+#     properties:
+#       resource_config:
+#         variables:
+#           aws_region: { get_input: CLUSTER_A--RDS--aws_region }
+#           access_key: { get_secret: aws_access_key }
+#           secret_key: { get_secret: aws_secret_key }
+#           lb_name: { get_input: lb_name }
+#           domain_name: { get_input: domain_name }
+#           openshift1_vpc_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, vpc] }
+#           openshift2_vpc_id: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, vpc] }
+#           openshift_public_subnet_ids: 
+#             - { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, public_subnet] }
+#             - { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, public_subnet] }
+#           openshift_security_group_ids: 
+#             - { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, security_group] }
+#             - { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, security_group] }
+#         source:
+#           location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/lb.zip
+#           username: { get_secret: github_username }
+#           password: { get_secret: github_password }
+#     relationships:
+#       - target: CLUSTER_A--RDS--openshift_cluster
+#         type: cloudify.relationships.depends_on
+#       - target: CLUSTER_B--RDS--openshift_cluster
+#         type: cloudify.relationships.depends_on
+#       - target: CLUSTER_A--RDS--terraform
+#         type: cloudify.terraform.relationships.run_on_host
+
 
 capabilities:
 
