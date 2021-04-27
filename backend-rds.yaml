@@ -3,25 +3,26 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
   - https://cloudify.co/spec/cloudify/5.1.2/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
+  - plugin:cloudify-utilities-plugin
 
 inputs:
   aws_region:
     type: string
     description: AWS region to launch servers
     required: true
-    default: eu-central-1
+    default: eu-west-2
 
   availability_zones:
     type: list
     description: AWS ELB availability zones
     required: true
-    default: [ eu-central-1a, eu-central-1b ]
+    default: [ eu-west-2a, eu-west-2b ]
 
   db_name:
     type: string
     description: Name of the database to be created. Must begin with a letter and contain only alphanumeric characters.
     required: true
-    default: CloudifyDB
+    default: CloudifyDB1
     constraints:
       - pattern: "^[a-zA-Z][a-zA-Z0-9]+$"
 
@@ -44,8 +45,29 @@ inputs:
     constraints:
       - valid_values:
           - os-cb-cluster1
-          - os-cb-cluster2
+          - os-cb-cluster3
 
+  db_vpc_cidr:
+    type: string
+    required: true
+    default: "10.1.0.0/16"
+
+  main_db_subnet_cidr:
+    type: string
+    required: true
+    default: "10.1.1.0/24"
+
+  backup_db_subnet_cidr:
+    type: string
+    required: true
+    default: "10.1.2.0/24"
+
+dsl_definitions:
+
+  client_config: &client_config
+    aws_access_key_id: { get_secret: aws_access_key }
+    aws_secret_access_key: { get_secret: aws_secret_key }
+    region_name: { get_input: aws_region }
 
 node_templates:
 
@@ -77,11 +99,15 @@ node_templates:
           db_name: { get_input: db_name }
           db_username: { get_input: db_username }
           db_password: { get_input: db_password }
-          openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc] }
+          openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc, id] }
           openshift_route_tb_id: { get_attribute: [openshift_cluster, network_config, route_tb] }
           openshift_public_subnet_id: { get_attribute: [openshift_cluster, network_config, public_subnet] }
           openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
           openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
+          openshift_vpc_cidr: { get_attribute: [openshift_cluster, network_config, vpc, cidr] }
+          db_vpc_cidr: { get_input: db_vpc_cidr }
+          main_db_subnet_cidr: { get_input: main_db_subnet_cidr }
+          backup_db_subnet_cidr: { get_input: backup_db_subnet_cidr }
         source:
           location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/rds_dev.zip
           username: { get_secret: github_username }
@@ -97,7 +123,3 @@ capabilities:
   db_endpoint:
     description: RDS endpoint
     value: { get_attribute: [terraform_module, resources, main_db_rds, instances, 0, attributes, address] }
-
-  lb_endpoint:
-    description: ELB endpoint
-    value: { get_attribute: [terraform_module, resources, main_lb, instances, 0, attributes, dns_name] }

@@ -10,7 +10,21 @@ inputs:
   current_suffix_index:
     type: string
     description: The index of the deployment from a components composition
-    default: '0'
+    default: '2'
+
+  openshift_cluster_url:
+    type: string
+    description: The URL of the Openshift cluster
+    default: apps.os-cb-cluster1.w1b2.p1.openshiftapps.com
+    constraints:
+      - valid_values:
+        - apps.os-cb-cluster1.w1b2.p1.openshiftapps.com
+        - apps.os-cb-cluster3.p3w0.p1.openshiftapps.com
+
+  ingress_url:
+    type: string
+    description: The URL of the Ingress in Openshift. Equals the domain value by default.
+    default: test2.cloudifydemo.link
 
 node_types:
 
@@ -109,6 +123,7 @@ node_templates:
           labels:
             app: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
         spec:
+          replicas: 3
           strategy:
             type: Recreate
           selector:
@@ -147,8 +162,6 @@ node_templates:
                   persistentVolumeClaim:
                     claimName: { concat: [  'wp-pv-claim-', { get_input: current_suffix_index } ] }
               terminationGracePeriodSeconds: 5
-        # propagation_policy: 'Foreground'   
-        # namespace: 'default'
     relationships:
       - type: cloudify.relationships.depends_on
         target: RDS--terraform_module
@@ -156,6 +169,22 @@ node_templates:
         target: master
       - type: cloudify.relationships.depends_on
         target: service
+
+  ingress:
+    type: cloudify.kubernetes.resources.FileDefinedResource
+    properties:
+      file:
+        resource_path: resources/ingress.yaml
+        template_variables:
+          NAME: { concat: [ 'ingress-', { get_input: current_suffix_index } ] }
+          NAMESPACE: { get_secret: openshift_namespace }
+          URL: { get_input: ingress_url }
+          SERVICE_NAME: { concat: [ 'wordpress-', { get_input: current_suffix_index } ] }
+          SERVICE_PORT: 80
+          HOSTNAME: { get_input: openshift_cluster_url }
+    relationships:
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: master
 
   master:
     type: cloudify.kubernetes.nodes.Master
