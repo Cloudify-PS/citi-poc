@@ -8,7 +8,7 @@ from cloudify.state import ctx_parameters
 from cloudify.exceptions import NonRecoverableError
 
 CLUSTER_A = 'os-cb-cluster1'
-CLUSTER_B = 'os-cb-cluster2'
+CLUSTER_B = 'os-cb-cluster3'
 
 API = 'api_config'
 NETWORK = 'network_config'
@@ -26,41 +26,42 @@ if cluster_name == CLUSTER_A:
     }
     configuration[NETWORK] = {
         "cluster_name": "os-cb-cluster1",
-        "vpc": "vpc-01f23fec9019e8f4c",
+        "vpc": {
+            "id": "vpc-01f23fec9019e8f4c",
+            "cidr": "10.0.0.0/16"
+        },
         "public_subnet": "subnet-003311ac114cc7dba",
         "route_tb": "rtb-0c5ee5b09eda70143",
         "security_group": "sg-090d730343326f2cf",
         "instances": [
-            "i-099b43bec984ab7e5",
-            "i-0463df568c1aa7e66",
-            "i-0d62c1d224156e85d",
+            # "i-099b43bec984ab7e5",
+            # "i-0463df568c1aa7e66",
+            # "i-0d62c1d224156e85d",
             "i-09f1d2de035025d02",
             "i-021811b728f181fc5",
-            "i-09a56aaf3f1e4ff13",
-            "i-0018d3b701eeeb140"
+            # "i-09a56aaf3f1e4ff13",
+            # "i-0018d3b701eeeb140"
         ]
     }
 elif cluster_name == CLUSTER_B:
     configuration[API] = {
-        "host": "https://api.os-cb-cluster2.ccif.p1.openshiftapps.com:6443",
-        "api_key": "sha256~LfTvKtjzegCsyx7N0FQ5WZ8nDTmiI8T1FcdRCKBx3BY",
+        "host": "https://api.os-cb-cluster3.p3w0.p1.openshiftapps.com:6443",
+        "api_key": "sha256~f6Ni8zTdX3fo0Nb9Ua6xGVUqTIMeokYEnFjCeLCpd8c",
         "debug": False,
         "verify_ssl": False
     }
     configuration[NETWORK] = {
-        "cluster_name": "os-cb-cluster2",
-        "vpc": "vpc-0ec3c7bcafea43a99",
-        "public_subnet": "subnet-013004ef27a8bd393",
-        "route_tb": "rtb-088df2c51e2082310",
-        "security_group": "sg-0fc8ddf0d72e610e8",
+        "cluster_name": "os-cb-cluster3",
+        "vpc": {
+            "id": "vpc-0d43b67165d8735a0",
+            "cidr": "10.100.0.0/16"
+        },
+        "public_subnet": "subnet-09a7ea444dcd8d6df",
+        "route_tb": "rtb-092da85f1bb7f83ab",
+        "security_group": "sg-03aec47c6205f5771",
         "instances": [
-            "i-041fe1bc3ac69fa80",
-            "i-0cf10177163a4529f",
-            "i-0a874e009daf126af",
-            "i-03d854125d6b7fd65",
-            "i-0e79cc215ccac1239",
-            "i-0a53aef8171a6e301",
-            "i-0dbc9810689968bb4"
+            "i-0472a8990fe102cb4",
+            "i-0462d2b9234956219"
         ]
     }
 else:

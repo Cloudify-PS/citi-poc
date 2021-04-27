@@ -1,5 +1,6 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
+
 imports:
   - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
   - plugin:cloudify-kubernetes-plugin
@@ -39,7 +40,6 @@ dsl_definitions:
     region_name: { get_input: aws_region }
 
 node_templates:
-
   terraform_module:
     type: cloudify.nodes.terraform.Module
     properties:

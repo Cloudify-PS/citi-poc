@@ -136,6 +136,7 @@ node_templates:
                 app: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
                 tier: frontend
             spec:
+              replicas: 3
               containers:
               - image: wordpress:4.8.0-apache
                 name: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
