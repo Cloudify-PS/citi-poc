@@ -20,7 +20,7 @@ inputs:
     type: string
     description: Domain for AWS Route53
     required: true
-    default: test2.cloudifydemo.link
+    default: www.cloudifydemo.link
 
   aws_region:
     type: string
@@ -50,6 +50,7 @@ node_templates:
           secret_key: { get_secret: aws_secret_key }
           lb_name: { get_input: lb_name }
           domain_name: { get_input: domain_name }
+          zone_id: { get_input: hosted_zone_id }
           vpc_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, vpc, id] }
           public_subnet_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, public_subnet] }
           cluster_a:
@@ -197,6 +198,8 @@ node_templates:
                 TTL: !!int 60
                 ResourceRecords:
                 - Value: { get_attribute: [ip, aws_resource_id] }
+        stop: {}
+        delete: {}
     relationships:
     - type: cloudify.relationships.aws.route53.record_set.connected_to
       target: dns_hosted_zone
@@ -229,6 +232,8 @@ node_templates:
                 TTL: !!int 60
                 ResourceRecords:
                 - Value: { get_attribute: [ip, aws_resource_id] }
+        stop: {}
+        delete: {}
     relationships:
     - type: cloudify.relationships.aws.route53.record_set.connected_to
       target: dns_hosted_zone

@@ -24,7 +24,7 @@ inputs:
   ingress_url:
     type: string
     description: The URL of the Ingress in Openshift. Equals the domain value by default.
-    default: test2.cloudifydemo.link
+    default: www.cloudifydemo.link
 
 node_types:
 
@@ -123,7 +123,8 @@ node_templates:
           labels:
             app: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
         spec:
-          replicas: 3
+          # replicas: 3
+          replicas: 1
           strategy:
             type: Recreate
           selector:
