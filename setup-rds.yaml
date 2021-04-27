@@ -8,7 +8,7 @@ imports:
   - plugin:cloudify-aws-plugin
   - plugin:cloudify-utilities-plugin
   - CLUSTER_A--application-rds.yaml
-  - CLUSTER_B--application-rds.yaml
+  # - CLUSTER_B--application-rds.yaml
 
 inputs:
 
@@ -80,8 +80,8 @@ node_templates:
         type: cloudify.relationships.depends_on
       - target: CLUSTER_A--RDS--openshift_cluster
         type: cloudify.relationships.depends_on
-      - target: CLUSTER_B--RDS--openshift_cluster
-        type: cloudify.relationships.depends_on
+      # - target: CLUSTER_B--RDS--openshift_cluster
+      #   type: cloudify.relationships.depends_on
       - target: CLUSTER_A--RDS--terraform
         type: cloudify.terraform.relationships.run_on_host
 
@@ -100,20 +100,20 @@ node_templates:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: CLUSTER_A--master
 
-  certificate-secret-B:
-    type: cloudify.kubernetes.resources.FileDefinedResource
-    properties:
-      file:
-        resource_path: resources/certificate.yaml
-        template_variables:
-          NAMESPACE: { get_secret: openshift_namespace }
-          CERT: { get_attribute: [ cert_generation, cert_base64 ] }
-          KEY: { get_attribute: [ cert_generation, key_base64 ] }
-    relationships:
-      - type: cloudify.relationships.depends_on
-        target: terraform_module
-      - type: cloudify.kubernetes.relationships.managed_by_master
-        target: CLUSTER_B--master
+  # certificate-secret-B:
+  #   type: cloudify.kubernetes.resources.FileDefinedResource
+  #   properties:
+  #     file:
+  #       resource_path: resources/certificate.yaml
+  #       template_variables:
+  #         NAMESPACE: { get_secret: openshift_namespace }
+  #         CERT: { get_attribute: [ cert_generation, cert_base64 ] }
+  #         KEY: { get_attribute: [ cert_generation, key_base64 ] }
+  #   relationships:
+  #     - type: cloudify.relationships.depends_on
+  #       target: terraform_module
+  #     - type: cloudify.kubernetes.relationships.managed_by_master
+  #       target: CLUSTER_B--master
 
   cert_host:
     type: cloudify.nodes.aws.ec2.Instances

@@ -9,6 +9,11 @@ spec:
   capacity:
     storage: 20Gi
   accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: {{ PATH }}
+    - ReadWriteMany
+  storageClassName: aws-efs
+  # hostPath:
+  #   path: /
+  #   path: {{ PATH }}
+  nfs:
+    server: fs-6d72ae36.efs.eu-central-1.amazonaws.com
+    path: /

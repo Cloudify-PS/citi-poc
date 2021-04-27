@@ -75,11 +75,15 @@ node_templates:
           labels:
             app:  { concat: [  'wordpress-',  { get_input: current_suffix_index } ] }
         spec:
+          storageClassName: aws-efs
           accessModes:
-            - ReadWriteOnce
+            - ReadWriteMany
           resources:
             requests:
               storage: 20Gi
+          selector:
+            matchLabels:
+              type: "local"
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
@@ -123,8 +127,7 @@ node_templates:
           labels:
             app: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
         spec:
-          # replicas: 3
-          replicas: 1
+          replicas: 3
           strategy:
             type: Recreate
           selector:
