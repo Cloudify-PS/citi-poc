@@ -1,16 +1,66 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
+  - https://cloudify.co/spec/cloudify/5.1.2/types.yaml
+  - plugin:cloudify-terraform-plugin?version= >=0.15.0
   - plugin:cloudify-ansible-plugin
   - plugin:cloudify-utilities-plugin
-  - plugin:cloudify-aws-plugin
-  - common/common.yaml
 
 inputs:
+  aws_region:
+    type: string
+    description: AWS region to launch servers
+    required: true
+    default: eu-west-2
+
+  availability_zones:
+    type: list
+    description: AWS ELB availability zones
+    required: true
+    default: [ eu-west-2a, eu-west-2b ]
+
+  db_name:
+    type: string
+    description: Name of the database to be created. Must begin with a letter and contain only alphanumeric characters.
+    required: true
+    default: CloudifyDB1
+    constraints:
+      - pattern: "^[a-zA-Z][a-zA-Z0-9]+$"
+
+  db_username:
+    type: string
+    description: Name of the database user
+    required: true
+    default: cloudify
+
+  db_password:
+    type: string
+    description: Password of the database user
+    required: true
+    default: C!0ud1FY
+
+  openshift_cluster:
+    type: string
+    description: Openshift networking config
+    required: true
+    constraints:
+      - valid_values:
+          - os-cb-cluster1
+          - os-cb-cluster3
+
   instance_type:
     description: >
-      The AWS instance_type.
+      The AWS instance_type for MariaDB host VM.
     default: 't2.micro'
+
+  db_cidr:
+    type: dict
+    description: MariaDB networking CIDRs
+    required: true
+    default:
+      vpc: 10.1.0.0/16
+      main_subnet: 10.1.1.0/24
+      backup_subnet: 10.1.2.0/24
 
 dsl_definitions:
 
@@ -20,6 +70,64 @@ dsl_definitions:
     region_name: { get_input: aws_region }
 
 node_templates:
+
+  openshift_cluster:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          executor: central_deployment_agent
+          implementation: scripts/init.py
+          inputs:
+            cluster_name: { get_input: openshift_cluster }
+
+  terraform:
+    type: cloudify.nodes.terraform
+    properties:
+      resource_config:
+        installation_source: https://releases.hashicorp.com/terraform/0.14.3/terraform_0.14.3_linux_amd64.zip
+
+  terraform_module:
+    type: cloudify.nodes.terraform.Module
+    properties:
+      resource_config:
+        variables:
+          aws_region: { get_input: aws_region }
+          access_key: { get_secret: aws_access_key }
+          secret_key: { get_secret: aws_secret_key }
+          availability_zones: { get_input: availability_zones }
+          openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc] }
+          openshift_route_tb_id: { get_attribute: [openshift_cluster, network_config, route_tb] }
+          openshift_public_subnet_id: { get_attribute: [openshift_cluster, network_config, public_subnet] }
+          openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
+          openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
+          openshift_vpc_cidr: { get_attribute: [openshift_cluster, network_config, vpc, cidr] }
+          db_vpc_cidr: { get_input: [db_cidr, vpc] }
+          main_db_subnet_cidr: { get_input: [db_cidr, main_subnet] }
+          backup_db_subnet_cidr: { get_input: [db_cidr, backup_subnet] }
+        source:
+          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/custom_db.zip
+          username: { get_secret: github_username }
+          password: { get_secret: github_password }
+    relationships:
+      - target: openshift_cluster
+        type: cloudify.relationships.depends_on
+      - target: terraform
+        type: cloudify.terraform.relationships.run_on_host
+
+  centos_core_ami:
+    type: cloudify.nodes.aws.ec2.Image
+    properties:
+      client_config: *client_config
+      resource_config:
+        kwargs:
+          Filters:
+          - Name: owner-id
+            Values:
+            - "057448758665"
+          - Name: name
+            Values:
+            - "CentOS 7.7.1908 x86_64 with cloud-init (HVM)"
 
   cluster_member_aggregator:
     type: cloudify.nodes.Root
@@ -82,7 +190,7 @@ node_templates:
       - type: cloudify.relationships.contained_in
         target: mariadb
 
-  cloud_init:
+  cloud_init_db:
     type: cloudify.nodes.CloudInit.CloudConfig
     properties:
       resource_config:
@@ -93,7 +201,7 @@ node_templates:
             sudo:
               - 'ALL=(ALL) NOPASSWD:ALL'
             ssh-authorized-keys:
-              - { get_attribute: [agent_key, public_key_export] }
+              - { get_attribute: [agent_key_db, public_key_export] }
           - name: prometheus-node-exporter
             sudo:
               - 'ALL=(ALL) NOPASSWD:ALL'
@@ -125,7 +233,7 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: agent_key
 
-  agent_key:
+  agent_key_db:
     type: cloudify.keys.nodes.RSAKey
     properties:
       resource_config:
@@ -147,7 +255,7 @@ node_templates:
       agent_config:
         install_method: none
         user: ec2-user
-        key: { get_attribute: [agent_key, private_key_export] }
+        key: { get_attribute: [agent_key_db, private_key_export] }
       resource_config:
         MaxCount: 1
         MinCount: 1
@@ -159,46 +267,45 @@ node_templates:
             Ebs:
               DeleteOnTermination: True
           Placement:
-            # TODO: from input?
             AvailabilityZone: eu-central-1a
-          UserData: { get_attribute: [ cloud_init, cloud_config ] }
+          UserData: { get_attribute: [ cloud_init_db, cloud_config ] }
       use_public_ip: true
     relationships:
       - type: cloudify.relationships.depends_on
-        target: nic
+        target: nic_db
       - type: cloudify.relationships.depends_on
-        target: ip
+        target: ip_db
       - type: cloudify.relationships.depends_on
         target: centos_core_ami
       - type: cloudify.relationships.depends_on
-        target: cloud_init
+        target: cloud_init_db
 
-  ip:
+  ip_db:
     type: cloudify.nodes.aws.ec2.ElasticIP
     properties:
       client_config: *client_config
     relationships:
       - type: cloudify.relationships.depends_on
-        target: nic
+        target: nic_db
 
-  nic:
+  nic_db:
     type: cloudify.nodes.aws.ec2.Interface
     properties:
       client_config: *client_config
       resource_config:
         kwargs:
-          SubnetId: { get_attribute: [ subnet, aws_resource_id] }
+          SubnetId: { get_attribute: [ subnet_db, aws_resource_id] }
           Groups:
             - { get_attribute: [ security_group, aws_resource_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
-        target: subnet
+        target: subnet_db
       - type: cloudify.relationships.depends_on
-        target: security_group
+        target: security_group_db
       - type: cloudify.relationships.depends_on
-        target: security_group_rules
+        target: security_group_rules_db
 
-  security_group_rules:
+  security_group_rules_db:
     type: cloudify.nodes.aws.ec2.SecurityGroupRuleIngress
     properties:
       client_config: *client_config
@@ -238,7 +345,7 @@ node_templates:
       - type: cloudify.relationships.contained_in
         target: security_group
 
-  security_group:
+  security_group_db:
     type: cloudify.nodes.aws.ec2.SecurityGroup
     properties:
       client_config: *client_config
@@ -250,7 +357,7 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: vpc
 
-  subnet:
+  subnet_db:
     type: cloudify.nodes.aws.ec2.Subnet
     properties:
       client_config: *client_config
@@ -263,7 +370,7 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: terraform_module
 
-  vpc:
+  vpc_db:
     type: cloudify.nodes.aws.ec2.Vpc
     properties:
       client_config: *client_config
@@ -275,15 +382,15 @@ node_templates:
       - type: cloudify.relationships.depends_on
         target: terraform_module
 
-  internet_gateway:
+  internet_gateway_db:
     type: cloudify.nodes.aws.ec2.InternetGateway
     properties:
       client_config: *client_config
     relationships:
       - type: cloudify.relationships.connected_to
-        target: vpc
+        target: vpc_db
 
-  route_public_subnet_internet_gateway:
+  route_public_subnet_internet_gateway_db:
     type: cloudify.nodes.aws.ec2.Route
     properties:
       resource_config:
@@ -294,42 +401,28 @@ node_templates:
     - type: cloudify.relationships.contained_in
       target: routetable
     - type: cloudify.relationships.connected_to
-      target: internet_gateway
+      target: internet_gateway_db
     interfaces:
       cloudify.interfaces.lifecycle:
         stop: {}
 
-  routetable:
+  routetable_db:
     type: cloudify.nodes.aws.ec2.RouteTable
     properties:
       client_config: *client_config
     relationships:
     - type: cloudify.relationships.contained_in
-      target: vpc
+      target: vpc_db
     - type: cloudify.relationships.connected_to
-      target: subnet
-
-  centos_core_ami:
-    type: cloudify.nodes.aws.ec2.Image
-    properties:
-      client_config: *client_config
-      resource_config:
-        kwargs:
-          Filters:
-          - Name: owner-id
-            Values:
-            - "057448758665"
-          - Name: name
-            Values:
-            - "CentOS 7.7.1908 x86_64 with cloud-init (HVM)"
+      target: subnet_db
 
 groups:
 
   scalable_compute:
     members:
       - host
-      - nic
-      - ip
+      - nic_db
+      - ip_db
 
   scalable_cluster:
     members:
@@ -352,5 +445,6 @@ policies:
 
 capabilities:
 
-  endpoints:
-    value: { get_attribute: [ cluster_member_aggregator, cluster_members ] }
+  db_endpoint:
+    description: MariaDB endpoint
+    value: todo #TODO: { get_attribute: [host, ip] }
