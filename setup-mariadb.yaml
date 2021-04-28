@@ -5,9 +5,9 @@ imports:
   - plugin:cloudify-kubernetes-plugin
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
   - plugin:cloudify-aws-plugin
+  - plugin:cloudify-utilities-plugin
   - CLUSTER_A--application-mariadb.yaml
   - CLUSTER_B--application-mariadb.yaml
-
 
 inputs:
 
@@ -31,6 +31,12 @@ inputs:
     type: string
     required: true
     default: Z095567936AFFYEKNEKDY
+
+dsl_definitions:
+  client_config: &client_config
+    aws_access_key_id: { get_secret: aws_access_key }
+    aws_secret_access_key: { get_secret: aws_secret_key }
+    region_name: { get_input: aws_region }
 
 node_templates:
 
