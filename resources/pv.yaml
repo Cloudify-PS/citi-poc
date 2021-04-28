@@ -15,5 +15,6 @@ spec:
   #   path: /
   #   path: {{ PATH }}
   nfs:
-    server: fs-6d72ae36.efs.eu-central-1.amazonaws.com
+    # server: fs-6d72ae36.efs.eu-central-1.amazonaws.com
+    server: {{ EFS_URL }}
     path: /
