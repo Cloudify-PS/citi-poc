@@ -59,6 +59,7 @@ node_templates:
           NAME: { concat: [  'wp-pv-',  { get_input: current_suffix_index } ] }
           NAMESPACE: { get_secret: openshift_namespace }
           PATH:  { concat: [  '/tmp/data/wp-pv-',  { get_input: current_suffix_index } ] }
+          EFS_URL: { get_attribute: [RDS--openshift_cluster, efs_config, url] }
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
@@ -75,11 +76,15 @@ node_templates:
           labels:
             app:  { concat: [  'wordpress-',  { get_input: current_suffix_index } ] }
         spec:
+          storageClassName: aws-efs
           accessModes:
-            - ReadWriteOnce
+            - ReadWriteMany
           resources:
             requests:
               storage: 20Gi
+          selector:
+            matchLabels:
+              type: "local"
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
@@ -123,8 +128,7 @@ node_templates:
           labels:
             app: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
         spec:
-          # replicas: 3
-          replicas: 1
+          replicas: 3
           strategy:
             type: Recreate
           selector:

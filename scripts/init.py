@@ -12,6 +12,7 @@ CLUSTER_B = 'os-cb-cluster3'
 
 API = 'api_config'
 NETWORK = 'network_config'
+EFS = 'efs_config'
 
 configuration = {}
 
@@ -43,6 +44,9 @@ if cluster_name == CLUSTER_A:
             # "i-0018d3b701eeeb140"
         ]
     }
+    configuration[EFS] = {
+        "url": "fs-6d72ae36.efs.eu-central-1.amazonaws.com"
+    }
 elif cluster_name == CLUSTER_B:
     configuration[API] = {
         "host": "https://api.os-cb-cluster3.p3w0.p1.openshiftapps.com:6443",
@@ -63,6 +67,9 @@ elif cluster_name == CLUSTER_B:
             "i-0472a8990fe102cb4",
             "i-0462d2b9234956219"
         ]
+    }
+    configuration[EFS] = {
+        "url": "fs-1272ae49.efs.eu-central-1.amazonaws.com"
     }
 else:
     raise Exception("Unhandled cluster name: {}".format(cluster_name))
