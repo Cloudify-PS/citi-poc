@@ -4,8 +4,9 @@ sudo yum -y install epel-release
 sudo yum -y install snapd
 sudo systemctl enable --now snapd.socket
 sudo ln -s /var/lib/snapd/snap /snap
-sudo snap install core; sudo snap refresh core
-sudo yum remove certbot
+sudo snap install core || true
+sudo snap refresh core || true
+sudo yum remove certbot || true
 sudo snap install --classic certbot
 sudo ln -s /snap/bin/certbot /usr/bin/certbot
 sudo certbot certonly --standalone --register-unsafely-without-email --agree-tos -d ${domain}
