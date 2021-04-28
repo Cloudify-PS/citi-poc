@@ -231,7 +231,7 @@ node_templates:
           - systemctl start node_exporter.service
     relationships:
       - type: cloudify.relationships.depends_on
-        target: agent_key
+        target: agent_key_db
 
   agent_key_db:
     type: cloudify.keys.nodes.RSAKey
@@ -296,7 +296,7 @@ node_templates:
         kwargs:
           SubnetId: { get_attribute: [ subnet_db, aws_resource_id] }
           Groups:
-            - { get_attribute: [ security_group, aws_resource_id ] }
+            - { get_attribute: [ security_group_db, aws_resource_id ] }
     relationships:
       - type: cloudify.relationships.depends_on
         target: subnet_db
@@ -343,7 +343,7 @@ node_templates:
               - CidrIp: 0.0.0.0/0
     relationships:
       - type: cloudify.relationships.contained_in
-        target: security_group
+        target: security_group_db
 
   security_group_db:
     type: cloudify.nodes.aws.ec2.SecurityGroup
@@ -352,10 +352,10 @@ node_templates:
       resource_config:
         Description: Security group for MariaDB host VM
         GroupName: cloudify-security-group
-        VpcId: { get_attribute: [ vpc, aws_resource_id] }
+        VpcId: { get_attribute: [ vpc_db, aws_resource_id] }
     relationships:
       - type: cloudify.relationships.depends_on
-        target: vpc
+        target: vpc_db
 
   subnet_db:
     type: cloudify.nodes.aws.ec2.Subnet
@@ -399,7 +399,7 @@ node_templates:
       client_config: *client_config
     relationships:
     - type: cloudify.relationships.contained_in
-      target: routetable
+      target: routetable_db
     - type: cloudify.relationships.connected_to
       target: internet_gateway_db
     interfaces:
@@ -429,22 +429,22 @@ groups:
       - scalable_compute
       - mariadb
 
-policies:
+# policies:
 
-  scalable_compute_policy:
-    type: cloudify.policies.scaling
-    properties:
-      default_instances: 1
-    targets: [scalable_compute]
+#   scalable_compute_policy:
+#     type: cloudify.policies.scaling
+#     properties:
+#       default_instances: 1
+#     targets: [scalable_compute]
 
-  scalable_cluster_policy:
-    type: cloudify.policies.scaling
-    properties:
-      default_instances: 1
-    targets: [scalable_cluster]
+#   scalable_cluster_policy:
+#     type: cloudify.policies.scaling
+#     properties:
+#       default_instances: 1
+#     targets: [scalable_cluster]
 
 capabilities:
 
   db_endpoint:
     description: MariaDB endpoint
-    value: todo #TODO: { get_attribute: [host, ip] }
+    value: { get_attribute: [host, ip] }
