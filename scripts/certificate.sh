@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 sudo yum -y install epel-release
 sudo yum -y install snapd
 sudo systemctl enable --now snapd.socket
