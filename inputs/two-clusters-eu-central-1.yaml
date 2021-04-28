@@ -9,7 +9,7 @@ CLUSTER_A--RDS--db_name: CloudifyDB1
 CLUSTER_A--RDS--db_password: C!0ud1FY
 CLUSTER_A--RDS--db_username: cloudify
 CLUSTER_A--current_suffix_index: "0"
-CLUSTER_A--ingress_url: www.cloudifydemo2.link
+CLUSTER_A--ingress_url: www.test.cloudifydemo.link
 CLUSTER_A--openshift_cluster_url: apps.os-cb-cluster1.w1b2.p1.openshiftapps.com
 
 CLUSTER_B--RDS--openshift_cluster: os-cb-cluster3
@@ -23,10 +23,11 @@ CLUSTER_B--RDS--db_name: CloudifyDB2
 CLUSTER_B--RDS--db_password: C!0ud1FY
 CLUSTER_B--RDS--db_username: cloudify
 CLUSTER_B--current_suffix_index: "0"
-CLUSTER_B--ingress_url: www.cloudifydemo2.link
+CLUSTER_B--ingress_url: www.test.cloudifydemo.link
 CLUSTER_B--openshift_cluster_url: apps.os-cb-cluster3.p3w0.p1.openshiftapps.com
 
 aws_region: eu-west-2
-domain_name: www.cloudifydemo2.link
-hosted_zone_id: Z0214608OEDLIAK46ATY
+domain_name: www.test.cloudifydemo.link
+# hosted_zone_id: Z0214608OEDLIAK46ATY
+hosted_zone_id: Z095567936AFFYEKNEKDY
 lb_name: CloudifyLB

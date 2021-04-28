@@ -50,7 +50,7 @@ if cluster_name == CLUSTER_A:
 elif cluster_name == CLUSTER_B:
     configuration[API] = {
         "host": "https://api.os-cb-cluster3.p3w0.p1.openshiftapps.com:6443",
-        "api_key": "sha256~nCyR9AfQLuu7G2byW6O4Qw1ksgeUVRFSkGjKam_g5HM",
+        "api_key": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjZBaG9aMVVKRmtGV19qelBySFBTUzI3U3UtdHBGbEdfSkZGSE1sWnBTa2MifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImV4YW1wbGVzLXVzZXItdG9rZW4teHo5emIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZXhhbXBsZXMtdXNlciIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjRkZDI5ZWQyLTFmZTItNDFmMy04ZjYxLTA5YzBkYzA5MjljYiIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmV4YW1wbGVzLXVzZXIifQ.nYphRlZ6in-9lCK7JMKOI9G38vCanU2sfq17ivyvEX31if7sluZ-z_Eg2UriQwf_oD1gM9lyn9Xc8AUDzrJLp0SqksIKU_Y7KTWlipnQ-9yu3allcebsetyNotNR0JqZkGeysbSih7eZ4wYOPSTHcTobNoawhP_eQ-tTMtBhXD3sfxaZPCODnFQPmtQWLGPbVY881lDXlArUwqFQ9y8EZqp82HuESfrFdFokrPobmHK-ORZJv96zYGf8WRiX0RrEPHkdHa3cDQJTd1GIwptqChP1cpMI8eJq9AKyl9UjKzOBLsZAgVitB_3orJ_plzhMo2JT60kxC39PnmYY_3ZxHQ",
         "debug": False,
         "verify_ssl": False
     }
