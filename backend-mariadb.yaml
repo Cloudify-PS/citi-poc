@@ -106,7 +106,7 @@ node_templates:
           main_db_subnet_cidr: { get_input: [db_cidr, main_subnet] }
           backup_db_subnet_cidr: { get_input: [db_cidr, backup_subnet] }
         source:
-          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/custom_db.zip
+          location: https://github.com/Cloudify-PS/morgan-stanley-poc-tf/archive/refs/heads/custom_db.zip
           username: { get_secret: github_username }
           password: { get_secret: github_password }
     relationships:
