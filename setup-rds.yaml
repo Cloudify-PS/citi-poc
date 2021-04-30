@@ -72,7 +72,7 @@ node_templates:
               https_port: "31010"
               availability_zone: all
         source:
-          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/lb.zip
+          location: https://github.com/Cloudify-PS/morgan-stanley-poc-tf/archive/refs/heads/lb.zip
           username: { get_secret: github_username }
           password: { get_secret: github_password }
     relationships:
