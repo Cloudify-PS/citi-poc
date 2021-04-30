@@ -1,4 +1,4 @@
-# citi-poc-poc
+# citi-poc
 
 Blueprints prepared for PoC for CITI. 
 
