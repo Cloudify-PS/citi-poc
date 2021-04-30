@@ -16,9 +16,9 @@ CLUSTER_B--RDS--openshift_cluster: os-cb-cluster3
 CLUSTER_B--RDS--availability_zones: ["eu-central-1a","eu-central-1b"]
 CLUSTER_B--RDS--aws_region: eu-central-1
 CLUSTER_B--RDS--db_cidr:
-  vpc: "10.21.0.0/16"
-  main_subnet: "10.21.1.0/24"
-  backup_subnet: "10.21.2.0/24"
+  vpc: "10.22.0.0/16"
+  main_subnet: "10.22.1.0/24"
+  backup_subnet: "10.22.2.0/24"
 CLUSTER_B--RDS--db_name: CloudifyDB2
 CLUSTER_B--RDS--db_password: C!0ud1FY
 CLUSTER_B--RDS--db_username: cloudify
