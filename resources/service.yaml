@@ -8,8 +8,10 @@ metadata:
 spec:
   ports:
     - port: {{ PORT }}
-      nodePort: {{ NODE_PORT }}
+      targetport: {{ PORT }}
+      # nodePort: {{ NODE_PORT }}
   selector:
     app: {{ NAME }}
     tier: frontend
-  type: NodePort
+  # type: NodePort
+  type: ClusterIP

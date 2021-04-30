@@ -6,13 +6,30 @@ imports:
   - CLUSTER_A--application.yaml
   - CLUSTER_B--application.yaml
   - CERTIFICATE--certificate.yaml
-  - LOAD_BALANCER--load-balancer.yaml
-  - relationships.yaml
+  - load-balancer.yaml
+
+
+node_templates:
+
+  CERTIFICATE--kubernetes-certificate-secret-A:
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: load_balancer_dns_terraform
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: CLUSTER_A--master
+
+  CERTIFICATE--kubernetes-certificate-secret-B:
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: load_balancer_dns_terraform
+      - type: cloudify.kubernetes.relationships.managed_by_master
+        target: CLUSTER_B--master
+
 
 capabilities:
 
   app_url:
-    value: { get_input: LOAD_BALANCER--domain_name }
+    value: { get_input: CERTIFICATE--domain_name }
 
   ssl_certificate:
     description: SSL certificate in base64 format

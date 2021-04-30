@@ -28,34 +28,48 @@ dsl_definitions:
 
 node_templates:
 
+  cloudify_manager:
+    type: cloudify.nodes.secrets.Reader
+    properties:
+      keys:
+        - cloudify_manager_config
+
   vpc:
     type: cloudify.nodes.aws.ec2.Vpc
     properties:
       client_config: *client_config
       use_external_resource: true
-      resource_id: vpc-6216f60b
+      resource_id: { get_attribute: [cloudify_manager, data, cloudify_manager_config, value, vpc] }
       resource_config:
         CidrBlock: 'N/A'
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: cloudify_manager
 
   subnet:
     type: cloudify.nodes.aws.ec2.Subnet
     properties:
       client_config: *client_config
       use_external_resource: true
-      resource_id: subnet-2ec53547
+      resource_id: { get_attribute: [cloudify_manager, data, cloudify_manager_config, value, subnet] }
       resource_config:
         CidrBlock: 'N/A'
         AvailabilityZone: 'N/A'
+    relationships:
+      - type: cloudify.relationships.depends_on
+        target: cloudify_manager
 
   internet_gateway:
     type: cloudify.nodes.aws.ec2.InternetGateway
     properties:
       client_config: *client_config
       use_external_resource: true
-      resource_id: igw-0946a760
+      resource_id: { get_attribute: [cloudify_manager, data, cloudify_manager_config, value, igw] }
     relationships:
       - type: cloudify.relationships.connected_to
         target: vpc
+      - type: cloudify.relationships.depends_on
+        target: cloudify_manager
 
   security_group:
     type: cloudify.nodes.aws.ec2.SecurityGroup
@@ -144,7 +158,7 @@ node_templates:
     properties:
       resource_config:
         users:
-          - name: ec2-user
+          - name: { get_secret: cert_host_user }
             primary-group: wheel
             shell: /bin/bash
             sudo:
@@ -196,15 +210,6 @@ node_templates:
       cloudify.interfaces.lifecycle:
         start:
           implementation: aws.cloudify_aws.route53.resources.record_set.prepare
-          # inputs:
-          #   resource_config:
-          #     Action: UPSERT
-          #     ResourceRecordSet:
-          #       Name: { get_input: domain_name }
-          #       Type: 'A'
-          #       TTL: !!int 60
-          #       ResourceRecords:
-          #       - Value: { get_attribute: [ip, aws_resource_id] }
         stop: {}
         delete: {}
     relationships:
@@ -219,7 +224,7 @@ node_templates:
       client_config: *client_config
       agent_config:
         install_method: remote
-        user: ec2-user
+        user: { get_secret: cert_host_user }
         key: { get_attribute: [agent_key, private_key_export] }
       resource_config:
         MaxCount: 1
@@ -232,7 +237,7 @@ node_templates:
             Ebs:
               DeleteOnTermination: True
           Placement:
-            AvailabilityZone: eu-west-2c  # Cloudify manager's AZ
+            AvailabilityZone: { get_attribute: [cloudify_manager, data, cloudify_manager_config, value, availability_zone] }  # Cloudify manager's AZ
           UserData: { get_attribute: [ cloud_init, cloud_config ] }
       use_public_ip: true
     relationships:
@@ -276,15 +281,6 @@ node_templates:
       cloudify.interfaces.lifecycle:
         start:
           implementation: aws.cloudify_aws.route53.resources.record_set.delete
-          # inputs:
-          #   resource_config:
-          #     Action: DELETE
-          #     ResourceRecordSet:
-          #       Name: { get_input: domain_name }
-          #       Type: 'A'
-          #       TTL: !!int 60
-          #       ResourceRecords:
-          #       - Value: { get_attribute: [ip, aws_resource_id] }
         stop: {}
         delete: {}
     relationships:
