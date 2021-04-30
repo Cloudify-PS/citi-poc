@@ -1,2 +1,0 @@
-[galera_cluster]
-galera-db-[01:03] ansible_user=root

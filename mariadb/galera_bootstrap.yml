@@ -1,5 +1,0 @@
----
-- hosts: galera_cluster
-  serial: 1
-  roles:
-    - galera_bootstrap

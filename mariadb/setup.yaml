@@ -1,4 +1,0 @@
-- mysql_user:
-    name: {{}}
-    host: galera_cluster
-    state: absent
