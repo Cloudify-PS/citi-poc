@@ -1,0 +1,58 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-terraform-plugin?version= >=0.15.0
+
+inputs:
+
+  lb_name:
+    type: string
+    default: CloudifyLB
+
+  # domain_name:
+  #   type: string
+  #   description: Domain for AWS Route53
+  #   required: true
+  #   default: www.cloudifydemo.link
+
+  # hosted_zone_id:
+  #   type: string
+  #   required: true
+  #   default: Z095567936AFFYEKNEKDY
+
+node_templates:
+  load_balancer_dns_terraform:
+    type: cloudify.nodes.terraform.Module
+    properties:
+      resource_config:
+        variables:
+          aws_region: eu-central-1
+          access_key: { get_secret: aws_access_key }
+          secret_key: { get_secret: aws_secret_key }
+          lb_name: { get_input: lb_name }
+          # domain_name: { get_input: domain_name }
+          # zone_id: { get_input: hosted_zone_id }
+          cluster_a:
+            - ip: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, workers, 0] }
+              http_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, availability_zone] }
+            - ip: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, workers, 1] }
+              http_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, availability_zone] }
+          cluster_b:
+            - ip: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, workers, 0] }
+              http_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, availability_zone] }
+            - ip: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, workers, 1] }
+              http_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, availability_zone] }
+        source:
+          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/lb.zip
+          username: { get_secret: github_username }
+          password: { get_secret: github_password }
