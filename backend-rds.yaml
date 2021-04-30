@@ -30,13 +30,22 @@ inputs:
     type: string
     description: Name of the database user
     required: true
-    default: cloudify
+    default: { get_secret: db_username }
 
   db_password:
     type: string
     description: Password of the database user
     required: true
-    default: C!0ud1FY
+    default: { get_secret: db_password }
+    
+  db_cidr:
+    type: dict
+    description: RDS DB networking CIDRs
+    required: true
+    default:
+      vpc: 10.1.0.0/16
+      main_subnet: 10.1.1.0/24
+      backup_subnet: 10.1.2.0/24
 
   openshift_cluster:
     type: string
@@ -47,14 +56,6 @@ inputs:
           - os-cb-cluster1
           - os-cb-cluster3
 
-  db_cidr:
-    type: dict
-    description: RDS DB networking CIDRs
-    required: true
-    default:
-      vpc: 10.1.0.0/16
-      main_subnet: 10.1.1.0/24
-      backup_subnet: 10.1.2.0/24
 
 dsl_definitions:
 
@@ -66,14 +67,10 @@ dsl_definitions:
 node_templates:
 
   openshift_cluster:
-    type: cloudify.nodes.Root
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        create:
-          executor: central_deployment_agent
-          implementation: scripts/init.py
-          inputs:
-            cluster_name: { get_input: openshift_cluster }
+    type: cloudify.nodes.secrets.Reader
+    properties:
+      keys:
+        - { get_input: openshift_cluster }
 
   terraform:
     type: cloudify.nodes.terraform
@@ -97,7 +94,6 @@ node_templates:
           openshift_route_tb_id: { get_attribute: [openshift_cluster, network_config, route_tb] }
           openshift_public_subnet_id: { get_attribute: [openshift_cluster, network_config, public_subnet] }
           openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
-          openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
           openshift_vpc_cidr: { get_attribute: [openshift_cluster, network_config, vpc, cidr] }
           db_vpc_cidr: { get_input: [db_cidr, vpc] }
           main_db_subnet_cidr: { get_input: [db_cidr, main_subnet] }

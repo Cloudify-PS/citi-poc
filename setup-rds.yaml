@@ -31,7 +31,7 @@ inputs:
   hosted_zone_id:
     type: string
     required: true
-    default: Z095567936AFFYEKNEKDY
+    default: { get_secret: hosted_zone_id }
 
 dsl_definitions:
   client_config: &client_config
@@ -54,23 +54,23 @@ node_templates:
           vpc_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, vpc, id] }
           public_subnet_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, public_subnet] }
           cluster_a:
-            - ip: "10.0.200.0"
-              http_port: "31763"
-              https_port: "30490"
-              availability_zone: eu-central-1a
-            - ip: "10.0.136.223"
-              http_port: "31763"
-              https_port: "30490"
-              availability_zone: eu-central-1a
+            - ip: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, workers, 0] }
+              http_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, availability_zone] }
+            - ip: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, workers, 1] }
+              http_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, network_config, availability_zone] }
           cluster_b:
-            - ip: "10.100.189.183"
-              http_port: "31516"
-              https_port: "31010"
-              availability_zone: all
-            - ip: "10.100.236.78"
-              http_port: "31516"
-              https_port: "31010"
-              availability_zone: all
+            - ip: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, workers, 0] }
+              http_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, availability_zone] }
+            - ip: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, workers, 1] }
+              http_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, http_port] }
+              https_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, https_port] }
+              availability_zone: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, network_config, availability_zone] }
         source:
           location: https://github.com/Cloudify-PS/morgan-stanley-poc-tf/archive/refs/heads/lb.zip
           username: { get_secret: github_username }
@@ -121,7 +121,7 @@ node_templates:
       client_config: *client_config
       agent_config:
         install_method: remote
-        user: ec2-user
+        user: { get_secret: cert_host_user }
         key: { get_attribute: [agent_key, private_key_export] }
       resource_config:
         MaxCount: 1
@@ -134,7 +134,7 @@ node_templates:
             Ebs:
               DeleteOnTermination: True
           Placement:
-            AvailabilityZone: eu-west-2c  # Cloudify manager's AZ
+            AvailabilityZone: { get_secret: cfy_manager_availability_zone }  # Cloudify manager's AZ
           UserData: { get_attribute: [ cloud_init, cloud_config ] }
       use_public_ip: true
     relationships:
@@ -245,7 +245,7 @@ node_templates:
     properties:
       resource_config:
         users:
-          - name: ec2-user
+          - name: { get_secret: cert_host_user }
             primary-group: wheel
             shell: /bin/bash
             sudo:

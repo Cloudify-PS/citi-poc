@@ -101,15 +101,6 @@ node_templates:
           PORT: 80
           NAME: { concat: [  'wordpress-', { get_input: current_suffix_index } ] }
           NAMESPACE: { get_secret: openshift_namespace }
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        precreate:
-          implementation: scripts/setPort.py
-          inputs:
-            EXTERNAL_NODE_PORT_BASE: 30080
-            INSTANCE_INDEX: { get_input: current_suffix_index }
-          executor: central_deployment_agent
-          max_retries: 0
     relationships:
       - type: cloudify.kubernetes.relationships.managed_by_master
         target: master
