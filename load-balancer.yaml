@@ -1,0 +1,58 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+
+imports:
+  - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
+  - plugin:cloudify-terraform-plugin?version= >=0.15.0
+
+inputs:
+
+  lb_name:
+    type: string
+    default: CloudifyLB
+
+  # domain_name:
+  #   type: string
+  #   description: Domain for AWS Route53
+  #   required: true
+  #   default: www.cloudifydemo.link
+
+  # hosted_zone_id:
+  #   type: string
+  #   required: true
+  #   default: Z095567936AFFYEKNEKDY
+
+node_templates:
+  load_balancer_dns_terraform:
+    type: cloudify.nodes.terraform.Module
+    properties:
+      resource_config:
+        variables:
+          aws_region: eu-central-1
+          access_key: { get_secret: aws_access_key }
+          secret_key: { get_secret: aws_secret_key }
+          lb_name: { get_input: lb_name }
+          # domain_name: { get_input: domain_name }
+          # zone_id: { get_input: hosted_zone_id }
+          cluster_a:
+            - ip: "10.0.200.0"
+              http_port: "31763"
+              https_port: "30490"
+              availability_zone: eu-central-1a
+            - ip: "10.0.136.223"
+              http_port: "31763"
+              https_port: "30490"
+              availability_zone: eu-central-1a
+          cluster_b:
+            - ip: "10.100.189.183"
+              http_port: "31516"
+              https_port: "31010"
+              availability_zone: all
+            - ip: "10.100.236.78"
+              http_port: "31516"
+              https_port: "31010"
+              availability_zone: all
+        source:
+          location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/lb.zip
+          username: { get_secret: github_username }
+          password: { get_secret: github_password }
