@@ -17,11 +17,11 @@ inputs:
   openshift_cluster_url:
     type: string
     description: The URL of the Openshift cluster
-    default: apps.os-cb-cluster1.w1b2.p1.openshiftapps.com
+    default: apps.os-cb-cluster1.ccif.p1.openshiftapps.com
     constraints:
       - valid_values:
-        - apps.os-cb-cluster1.w1b2.p1.openshiftapps.com
-        - apps.os-cb-cluster3.p3w0.p1.openshiftapps.com
+        - apps.os-cb-cluster1.ccif.p1.openshiftapps.com
+        - apps.os-cb-cluster2.755w.p1.openshiftapps.com
 
   ingress_url:
     type: string

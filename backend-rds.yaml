@@ -54,7 +54,7 @@ inputs:
     constraints:
       - valid_values:
           - os-cb-cluster1
-          - os-cb-cluster3
+          - os-cb-cluster2
 
 
 node_templates:
