@@ -2,6 +2,11 @@
 
 ## Setup
 
+# Manager
+Create a  manager in AWS and configure it or restore from snapshot
+Snapshot https://drive.google.com/file/d/1qkxyC_iQtwkF7e4W-FeZmTE4mqy8W9KG/view?usp=sharing
+
+
 ## Create EFS
 There needs to be one EFS per VPC - the reason is that the provided hostname for EFS service is not visible outside the VPC. The name is <file system id>.efs.<region>.amazonaws.com
 Alternative would be to create one with DNS name and use only one (but this was not tested)
