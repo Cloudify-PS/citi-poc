@@ -4,7 +4,9 @@
 
 # Manager
 Create a  manager in AWS and configure it or restore from snapshot
-Snapshot https://drive.google.com/file/d/1qkxyC_iQtwkF7e4W-FeZmTE4mqy8W9KG/view?usp=sharing
+
+Snapshot location https://drive.google.com/file/d/1rjdA9aAuZQazoem1jWGcoVL81BwnjoKu/view?usp=sharing
+After restoring from snapshot update all secrets that have CHANGEME value
 
 
 ## Create EFS
