@@ -5,6 +5,7 @@ imports:
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
 inputs:
+
   aws_region:
     type: string
     description: AWS region to launch servers
@@ -29,23 +30,14 @@ inputs:
     type: string
     description: Name of the database user
     required: true
-    default: cloudify
+    default: { get_secret: db_username }
 
   db_password:
     type: string
     description: Password of the database user
     required: true
-    default: C!0ud1FY
-
-  openshift_cluster:
-    type: string
-    description: Openshift networking config
-    required: true
-    constraints:
-      - valid_values:
-          - os-cb-cluster1
-          - os-cb-cluster3
-
+    default: { get_secret: db_password }
+    
   db_cidr:
     type: dict
     description: RDS DB networking CIDRs
@@ -55,17 +47,24 @@ inputs:
       main_subnet: 10.1.1.0/24
       backup_subnet: 10.1.2.0/24
 
+  openshift_cluster:
+    type: string
+    description: Openshift networking config
+    required: true
+    constraints:
+      - valid_values:
+          - os-cb-cluster1
+          - os-cb-cluster2
+
+
 node_templates:
 
   openshift_cluster:
-    type: cloudify.nodes.Root
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        create:
-          executor: central_deployment_agent
-          implementation: scripts/init.py
-          inputs:
-            cluster_name: { get_input: openshift_cluster }
+    type: cloudify.nodes.secrets.Reader
+    properties:
+      keys:
+        - openshift_cluster
+      variant: { get_input: openshift_cluster }
 
   terraform:
     type: cloudify.nodes.terraform
@@ -85,12 +84,11 @@ node_templates:
           db_name: { get_input: db_name }
           db_username: { get_input: db_username }
           db_password: { get_input: db_password }
-          openshift_vpc_id: { get_attribute: [openshift_cluster, network_config, vpc, id] }
-          openshift_route_tb_id: { get_attribute: [openshift_cluster, network_config, route_tb] }
-          openshift_public_subnet_id: { get_attribute: [openshift_cluster, network_config, public_subnet] }
-          openshift_security_group_id: { get_attribute: [openshift_cluster, network_config, security_group] }
-          openshift_instances: { get_attribute: [openshift_cluster, network_config, instances] }
-          openshift_vpc_cidr: { get_attribute: [openshift_cluster, network_config, vpc, cidr] }
+          openshift_vpc_id: { get_attribute: [openshift_cluster, data, openshift_cluster, value, network_config, vpc, id] }
+          openshift_route_tb_id: { get_attribute: [openshift_cluster, data, openshift_cluster, value, network_config, route_tb] }
+          openshift_public_subnet_id: { get_attribute: [openshift_cluster, data, openshift_cluster, value, network_config, public_subnet] }
+          openshift_security_group_id: { get_attribute: [openshift_cluster, data, openshift_cluster, value, network_config, security_group] }
+          openshift_vpc_cidr: { get_attribute: [openshift_cluster, data, openshift_cluster, value, network_config, vpc, cidr] }
           db_vpc_cidr: { get_input: [db_cidr, vpc] }
           main_db_subnet_cidr: { get_input: [db_cidr, main_subnet] }
           backup_db_subnet_cidr: { get_input: [db_cidr, backup_subnet] }
@@ -103,6 +101,7 @@ node_templates:
         type: cloudify.relationships.depends_on
       - target: terraform
         type: cloudify.terraform.relationships.run_on_host
+
 
 capabilities:
 

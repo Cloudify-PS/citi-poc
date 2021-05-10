@@ -5,24 +5,16 @@ imports:
   - https://cloudify.co/spec/cloudify/5.1.0/types.yaml
   - plugin:cloudify-terraform-plugin?version= >=0.15.0
 
+
 inputs:
 
   lb_name:
     type: string
     default: CloudifyLB
 
-  # domain_name:
-  #   type: string
-  #   description: Domain for AWS Route53
-  #   required: true
-  #   default: www.cloudifydemo.link
-
-  # hosted_zone_id:
-  #   type: string
-  #   required: true
-  #   default: Z095567936AFFYEKNEKDY
 
 node_templates:
+
   load_balancer_dns_terraform:
     type: cloudify.nodes.terraform.Module
     properties:
@@ -32,27 +24,38 @@ node_templates:
           access_key: { get_secret: aws_access_key }
           secret_key: { get_secret: aws_secret_key }
           lb_name: { get_input: lb_name }
-          # domain_name: { get_input: domain_name }
-          # zone_id: { get_input: hosted_zone_id }
+          domain_name: { get_input: CERTIFICATE--domain_name }
+          zone_id: { get_input: CERTIFICATE--hosted_zone_id }
+          vpc_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, vpc, id] }
+          public_subnet_id: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, public_subnet] }
           cluster_a:
-            - ip: "10.0.200.0"
-              http_port: "31763"
-              https_port: "30490"
-              availability_zone: eu-central-1a
-            - ip: "10.0.136.223"
-              http_port: "31763"
-              https_port: "30490"
-              availability_zone: eu-central-1a
+            - ip: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, workers, 0] }
+              http_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_http_port] }
+              https_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_https_port] }
+              availability_zone: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_availability_zone] }
+            - ip: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, workers, 1] }
+              http_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_http_port] }
+              https_port: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_https_port] }
+              availability_zone: { get_attribute: [CLUSTER_A--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_availability_zone] }
           cluster_b:
-            - ip: "10.100.189.183"
-              http_port: "31516"
-              https_port: "31010"
-              availability_zone: all
-            - ip: "10.100.236.78"
-              http_port: "31516"
-              https_port: "31010"
-              availability_zone: all
+            - ip: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, workers, 0] }
+              http_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_http_port] }
+              https_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_https_port] }
+              availability_zone: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_availability_zone] }
+            - ip: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, workers, 1] }
+              http_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_http_port] }
+              https_port: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_https_port] }
+              availability_zone: { get_attribute: [CLUSTER_B--RDS--openshift_cluster, data, openshift_cluster, value, network_config, ingress_availability_zone] }
         source:
           location: https://github.com/Cloudify-PS/citi-poc-tf/archive/refs/heads/lb.zip
           username: { get_secret: github_username }
           password: { get_secret: github_password }
+    relationships:
+      - target: CERTIFICATE--dns_record_remove
+        type: cloudify.relationships.depends_on
+      - target: CLUSTER_A--RDS--openshift_cluster
+        type: cloudify.relationships.depends_on
+      - target: CLUSTER_B--RDS--openshift_cluster
+        type: cloudify.relationships.depends_on
+      - target: CLUSTER_A--RDS--terraform
+        type: cloudify.terraform.relationships.run_on_host

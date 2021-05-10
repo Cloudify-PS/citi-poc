@@ -1,1 +1,0 @@
-https://docs.openshift.com/container-platform/4.7/storage/persistent_storage/persistent-storage-efs.html
